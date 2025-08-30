@@ -1,197 +1,109 @@
-# Simple 32-bit Operating System
+# submit2 — tiny 32-bit protected-mode kernel (educational)
 
-A minimal 32-bit protected-mode operating system with a basic shell, built from scratch using x86 assembly and C. This project demonstrates fundamental OS concepts including bootloading, memory management, interrupt handling, and user interaction.
+This repository contains a small, educational x86 kernel written in C and x86
+assembly. It's intended as a learning project: a bootable image with a tiny
+kernel that switches to 32-bit protected mode, installs a minimal IDT/PIC
+support, provides keyboard input and a simple shell using the VGA text buffer.
 
-## Features
+Files in this repo (relevant):
 
-- **Bootloader**: Custom MBR (Master Boot Record) that loads the kernel
-- **32-bit Protected Mode**: Transitions from 16-bit real mode to 32-bit protected mode
-- **Memory Management**: Global Descriptor Table (GDT) for memory segmentation
-- **Interrupt Handling**: Interrupt Descriptor Table (IDT) with PIC remapping
-- **Keyboard Support**: Real-time keyboard input handling
-- **Timer Support**: System timer for basic timing functionality
-- **Simple Shell**: Interactive command-line interface with basic commands
-- **VGA Text Mode**: Console output using VGA text buffer
+- `mbr.asm`          — MBR bootloader that loads the kernel to 0x1000
+- `kernel-entry.asm` — 32-bit kernel entry wrapper that calls `start_kernel`
+- `kernel.c`         — Kernel: VGA output, simple shell, keyboard and timer logic
+- `idt.asm`          — IDT/PIC related assembly (interrupt wiring)
+- `keyboard.asm`     — IRQ wrappers for keyboard and timer
+- `Makefile`         — Build rules (see below)
+- `kernel.bin`       — Linked binary kernel (build artifact)
+- `mbr.bin`          — Assembled MBR (build artifact)
+- `os-image.img`     — Concatenation of `mbr.bin` + `kernel.bin` (build artifact)
 
-## Project Structure
+Note: some helper includes referenced by `mbr.asm` (for disk/GDT switching)
+may be split into additional files in other branches; this README documents
+what is currently present in the workspace.
 
-```
-submit2/
-├── mbr.asm              # Master Boot Record - initial bootloader
-├── kernel-entry.asm     # Kernel entry point assembly code
-├── kernel.c             # Main kernel implementation with shell
-├── gdt.asm              # Global Descriptor Table setup
-├── idt.asm              # Interrupt Descriptor Table and PIC setup
-├── keyboard.asm         # Keyboard interrupt handler
-├── disk.asm             # Disk I/O routines
-├── switch-to-32bit.asm  # Mode switching from 16-bit to 32-bit
-├── Makefile             # Build configuration
-└── Readme.md           # This file
-```
+Features implemented in the code:
 
-## Prerequisites
+- VGA text-mode console (writes directly to 0xB8000)
+- Simple shell with commands: `help`, `clear`, `echo`, `exit`
+- Keyboard IRQ handler and scan-code to ASCII mapping
+- Timer IRQ hook (simple tick counter)
+- IDT installation and PIC remapping hooks (implemented in `idt.asm`)
 
-To build and run this operating system, you need:
+Prerequisites
 
-- **Cross-compiler**: `i686-elf-gcc` and `i686-elf-ld`
-- **NASM**: Netwide Assembler for x86 assembly
-- **QEMU**: For emulating the x86 system
-- **Make**: For build automation
+You will need the following tools to build and run the image locally:
 
-### Installation on macOS
+- `nasm` — assembler
+- `i686-elf-gcc` and `i686-elf-ld` — cross-compiler and linker (or a suitable
+	i386 toolchain that can produce 32-bit freestanding binaries)
+- `qemu-system-i386` — to run the resulting image in an emulator
+- `make`
 
-```bash
-# Install cross-compiler toolchain
-brew install i686-elf-gcc
-brew install nasm
-brew install qemu
-```
+On macOS you can install `nasm` and `qemu` via Homebrew. Cross-compilers
+often need to be built or installed separately (tool names vary by distro).
 
-### Installation on Ubuntu/Debian
+Build and run
 
-```bash
-# Install required packages
-sudo apt-get update
-sudo apt-get install build-essential nasm qemu-system-x86
-```
+The `Makefile` provides a few targets. The default `make` invokes the `run`
+target which launches QEMU; to only build the image without running it, build
+the `os-image.img` target directly.
 
-## Building the OS
-
-### Quick Start
+### Quick build (no emulator):
 
 ```bash
-# Build and run the OS
-make
-
-# Clean build artifacts and rebuild
-make clean && make
+make os-image.img
 ```
 
-### Build Process
-
-The build process follows these steps:
-
-1. **Assembly Files**: NASM compiles `.asm` files to object files
-2. **C Kernel**: Cross-compiler compiles `kernel.c` to object file
-3. **Linking**: Object files are linked into `kernel.bin`
-4. **Bootloader**: MBR is assembled to `mbr.bin`
-5. **Image Creation**: MBR and kernel are concatenated into `os-image.img`
-6. **Emulation**: QEMU runs the complete OS image
-
-### Manual Build Steps
+Build and run in QEMU (default `make` runs this):
 
 ```bash
-# Compile assembly files
-nasm kernel-entry.asm -f elf -o kernel-entry.o
-nasm idt.asm -f elf -o idt.o
-nasm keyboard.asm -f elf -o keyboard.o
-
-# Compile C kernel
-i686-elf-gcc -m32 -ffreestanding -c kernel.c -o kernel.o
-
-# Link kernel
-i686-elf-ld -Ttext 0x1000 -o kernel.bin kernel-entry.o kernel.o idt.o keyboard.o --oformat binary
-
-# Create bootloader
-nasm mbr.asm -f bin -o mbr.bin
-
-# Create OS image
-cat mbr.bin kernel.bin > os-image.img
-
-# Run in QEMU
-qemu-system-i386 -fda os-image.img
+make       # runs the 'run' target which invokes qemu-system-i386 -fda os-image.img
 ```
 
-## Using the OS
+Other useful targets in the Makefile:
 
-Once the OS boots, you'll see a simple shell prompt (`>`). Available commands:
+- `make kernel.bin` — assemble/link the kernel binary
+- `make mbr.bin`    — assemble the MBR boot sector
+- `make clean`      — remove built artifacts (Makefile's `clean` is present)
 
-- **`help`** - Display available commands
-- **`clear`** - Clear the screen
-- **`echo <text>`** - Display the specified text
-- **`exit`** - Reboot the system
+### Manual build steps (what the Makefile does):
 
-### Example Session
+1. Assemble `.asm` sources with `nasm -f elf` (or `-f bin` for the MBR).
+2. Compile `kernel.c` with a freestanding 32-bit cross-compiler flag
+	 (example: `i686-elf-gcc -m32 -ffreestanding -c kernel.c -o kernel.o`).
+3. Link object files into a flat binary at 0x1000 using the linker
+	 (`i686-elf-ld -Ttext 0x1000 -o kernel.bin <objs> --oformat binary`).
+4. Concatenate `mbr.bin` and `kernel.bin` into `os-image.img`.
 
-```
+Usage inside the running OS
+
+When the image boots (in QEMU or real hardware), a simple prompt (`>`) is
+present. Supported commands (case-insensitive in the C code):
+
+- `help`  — list available commands
+- `clear` — clear the VGA screen
+- `echo`  — echo the following text
+- `exit`  — trigger a BIOS reboot
+
+### Example session:
+
 > help
+
 help  - show this message
 clear - clear screen
 echo  - echo arguments
 exit  - reboot
 
-> echo Hello, World!
-Hello, World!
+### Development notes
 
-> clear
-> exit
-```
+- Keyboard and timer IRQ assembly wrappers are in `keyboard.asm` and call
+	C callbacks implemented in `kernel.c`.
+- `kernel.c` exposes `start_kernel` which is invoked from `kernel-entry.asm`.
+- The kernel uses VGA direct memory writes and port I/O (`inb`/`outb`).
 
-## 🔧 Technical Details
+If you want help adding features (new shell commands, drivers, or memory
+management), open an issue or send a patch with a focused change.
 
-### Memory Layout
+### References: 
 
-- **0x7C00**: MBR bootloader location
-- **0x1000**: Kernel load address
-- **0xB8000**: VGA text buffer
-- **0x9000**: Stack setup
-
-### Interrupt Handling
-
-- **IRQ 0**: System timer
-- **IRQ 1**: Keyboard controller
-- **PIC Remapping**: IRQs 0-7 → Interrupts 0x20-0x27
-
-### Protected Mode Features
-
-- **GDT**: Flat memory model with code and data segments
-- **IDT**: 256-entry interrupt descriptor table
-- **Ring 0**: Kernel runs in highest privilege level
-
-## Debugging
-
-### Debug Build
-
-```bash
-# Create debug version with disassembly
-make debug
-```
-
-### QEMU Debug Options
-
-```bash
-# Run with debug output
-qemu-system-i386 -fda os-image.img -d int,cpu_reset
-
-# Run with serial output
-qemu-system-i386 -fda os-image.img -serial stdio
-```
-
-## Learning Resources
-
-This project demonstrates several fundamental OS concepts:
-
-- **Boot Process**: From BIOS to kernel execution
-- **Memory Segmentation**: GDT and protected mode memory management
-- **Interrupt Handling**: IDT setup and interrupt service routines
-- **Device Drivers**: Basic keyboard and timer drivers
-- **System Programming**: Low-level x86 programming
-
-## Contributing
-
-This is an educational project. Feel free to:
-
-- Add new shell commands
-- Implement additional device drivers
-- Enhance the memory management system
-- Add multitasking capabilities
-- Improve the user interface
-
-## License
-
-This project is open source and available under the MIT License.
-
-## Acknowledgments
-
-- Inspired by OS development tutorials and x86 architecture documentation
-- Built for educational purposes to understand operating system fundamentals
+https://dev.to/frosnerd/writing-my-own-boot-loader-3mld
