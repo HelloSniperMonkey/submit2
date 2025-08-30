@@ -2,7 +2,7 @@
 
 A minimal 32-bit protected-mode operating system with a basic shell, built from scratch using x86 assembly and C. This project demonstrates fundamental OS concepts including bootloading, memory management, interrupt handling, and user interaction.
 
-## 🚀 Features
+## Features
 
 - **Bootloader**: Custom MBR (Master Boot Record) that loads the kernel
 - **32-bit Protected Mode**: Transitions from 16-bit real mode to 32-bit protected mode
@@ -13,7 +13,7 @@ A minimal 32-bit protected-mode operating system with a basic shell, built from 
 - **Simple Shell**: Interactive command-line interface with basic commands
 - **VGA Text Mode**: Console output using VGA text buffer
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 submit2/
@@ -29,7 +29,7 @@ submit2/
 └── Readme.md           # This file
 ```
 
-## 🛠️ Prerequisites
+## Prerequisites
 
 To build and run this operating system, you need:
 
@@ -55,7 +55,7 @@ sudo apt-get update
 sudo apt-get install build-essential nasm qemu-system-x86
 ```
 
-## 🔨 Building the OS
+## Building the OS
 
 ### Quick Start
 
@@ -102,7 +102,7 @@ cat mbr.bin kernel.bin > os-image.img
 qemu-system-i386 -fda os-image.img
 ```
 
-## 🎮 Using the OS
+## Using the OS
 
 Once the OS boots, you'll see a simple shell prompt (`>`). Available commands:
 
@@ -148,7 +148,7 @@ Hello, World!
 - **IDT**: 256-entry interrupt descriptor table
 - **Ring 0**: Kernel runs in highest privilege level
 
-## 🐛 Debugging
+## Debugging
 
 ### Debug Build
 
@@ -167,7 +167,7 @@ qemu-system-i386 -fda os-image.img -d int,cpu_reset
 qemu-system-i386 -fda os-image.img -serial stdio
 ```
 
-## 📚 Learning Resources
+## Learning Resources
 
 This project demonstrates several fundamental OS concepts:
 
@@ -177,7 +177,7 @@ This project demonstrates several fundamental OS concepts:
 - **Device Drivers**: Basic keyboard and timer drivers
 - **System Programming**: Low-level x86 programming
 
-## 🤝 Contributing
+## Contributing
 
 This is an educational project. Feel free to:
 
@@ -187,11 +187,11 @@ This is an educational project. Feel free to:
 - Add multitasking capabilities
 - Improve the user interface
 
-## 📄 License
+## License
 
 This project is open source and available under the MIT License.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Inspired by OS development tutorials and x86 architecture documentation
 - Built for educational purposes to understand operating system fundamentals
