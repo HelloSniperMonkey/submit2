@@ -94,8 +94,16 @@ static void execute(const char* cmd) {
     printk("\n");
   }
   else if (strcmp(cmd, "EXIT") == 0) {
-    /* using BIOS reboot */
-    asm volatile("int $0x19");
+  /* graceful shutdown: show messages, then disable keyboard input */
+  printk("\nShutting down DummyOS...\n");
+  printk("Goodbye!\n");
+  /* mask keyboard IRQ (IRQ1) on PIC */
+  uint8_t mask = inb(0x21);
+  outb(0x21, mask | 0x02);
+  /* disable keyboard at controller */
+  outb(0x64, 0xAD);
+  /* do not show a new prompt; CPU will just hlt in main loop */
+  return; /* skip prompt */
   }
   else {
     printk("\nUnknown command: ");
@@ -203,6 +211,10 @@ static int buf_pos = 0;
 void keyboard_callback(struct regs* r) {
   (void)r;
   uint8_t sc = inb(0x60);
+
+  /* if exit was invoked, ignore any further input */
+  /* We detect this by checking that keyboard IRQ is masked (bit 1) */
+  if (inb(0x21) & 0x02) return;
   
   /* Ignore key releases (high bit set) */
   if (sc & 0x80) return;
