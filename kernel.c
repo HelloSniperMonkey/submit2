@@ -1,5 +1,3 @@
-/* kernel.c — a tiny 32-bit protected-mode kernel with a simple shell */
-
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -76,7 +74,6 @@ static bool starts_with(const char* s, const char* p) {
   return true;
 }
 
-/* handle a completed command line */
 static void execute(const char* cmd) {
   if (strcmp(cmd, "HELP") == 0) {
     printk("\n");
@@ -94,23 +91,19 @@ static void execute(const char* cmd) {
     printk("\n");
   }
   else if (strcmp(cmd, "EXIT") == 0) {
-  /* graceful shutdown: show messages, then disable keyboard input */
-  printk("\nShutting down DummyOS...\n");
-  printk("Goodbye!\n");
-  /* mask keyboard IRQ (IRQ1) on PIC */
-  uint8_t mask = inb(0x21);
-  outb(0x21, mask | 0x02);
-  /* disable keyboard at controller */
-  outb(0x64, 0xAD);
-  /* do not show a new prompt; CPU will just hlt in main loop */
-  return; /* skip prompt */
+    printk("\nShutting down DummyOS...\n");
+    printk("Goodbye!\n");
+    uint8_t mask = inb(0x21);
+    outb(0x21, mask | 0x02);
+    /* disable keyboard at controller */
+    outb(0x64, 0xAD);
+    return; 
   }
   else {
     printk("\nUnknown command: ");
     printk(cmd);
     printk("\n");
   }
-  /* always show next prompt */
   prompt();
 }
 
@@ -136,10 +129,9 @@ static int timer_ticks = 0;
 void timer_callback(struct regs* r) {
   (void)r;
   timer_ticks++;
-  /* Remove the visual timer indicator since keyboard is working */
-  /* if (timer_ticks % 18 == 0) {
-    putchar('T');
-  } */
+  // if (timer_ticks % 18 == 0) {
+  //   putchar('T');
+  // } 
 }
 
 /* debug helper to check PIC masks */
